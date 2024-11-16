@@ -1,4 +1,4 @@
-// SYSC 4001 - Assignment 2 - Part III - Lab L6
+// SYSC 4001 - Assignment 3 - Part I - Lab L6
 // Wajd Mariam #101225633
 // Abed Qubbaj #101205030
 
@@ -15,30 +15,34 @@
 int mode = USER_MODE;
 int current_mode = USER_MODE; // Default Mode
 
+// Array of Structs:
 TraceEvent trace_events[MAX_EVENTS];
 ExternalFiles external_files[MAX_EXTERNAL_FILES];
 ProgramEvent program_events[MAX_EVENTS];
 PCB pcb_entries[MAX_PCB_ENTRIES];
 MemoryPartition memory_partitions[NUM_PARTITIONS];
 
+// Local Variables
 char instructions[25][7];
 char instruction[10];
-int event_count = 0;
 int current_time = 0;
+
+// Files:
 FILE *log_file;
 FILE *system_status_log_file;
 FILE *external_files_txt_file;
 FILE *vector_table_txt_file;
-int i = 0;
-int vector_table[25];
+
 // Initializing an array to store the random durations of SYSCALL events:
 int syscall_random_durations[3];
+
+// Initializing counters:
 static int trace_event_count = 0;
 static int program_event_count = 0;
 static int external_files_count = 0;
 static int pcb_counter = 0;
 static int save_time = 0;
-int external_file_size;
+
 
 // Defining memory_partitions array:
 MemoryPartition memory_partitions[NUM_PARTITIONS] = {
@@ -418,7 +422,8 @@ void exec_handler(const char *external_file_name, int event_duration) {
     unsigned int random_number = (rand() % 10) + 1;
     char current_program_name[30];
     unsigned int current_program_size;
-    char log_message[300]; 
+    char log_message[300];
+    int external_file_size;
     
     // Finding instructions stored in memory address associated with vector table position:
     strcpy(instruction, instructions[EXEC_VECTOR_TABLE_POSITION]);
