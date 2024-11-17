@@ -90,7 +90,7 @@ void fork_simulator(int event_duration);
 void exec_simulator(const char *external_file_name, int event_duration);
 void syscall_interrupt_simulator(int event_duration, int vector_table_position);
 void end_io_interrupt_simulator(int event_duration, int vector_table_position);
-void scheduler(void);
+void scheduler(unsigned int duration);
 void create_init_process(void);
 void copy_init_process(int copy_init_duration); 
 void allocate_partition(unsigned int program_size, const char *program_name, unsigned int process_type);

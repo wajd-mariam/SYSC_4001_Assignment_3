@@ -43,7 +43,6 @@ static int external_files_count = 0;
 static int pcb_counter = 0;
 static int save_time = 0;
 
-
 // Defining memory_partitions array:
 MemoryPartition memory_partitions[NUM_PARTITIONS] = {
     {1, 40, "free"},
@@ -177,7 +176,7 @@ void read_program_file(const char *filename) {
 }
 
 
-// Reading "external_files.txt" and storing files information in an array:
+// Reading "external_files.txt" and storing files information in "external_files" array:
 void read_external_files(const char *filename) {
     FILE *external_files_file = fopen(filename, "r");
     
@@ -239,7 +238,7 @@ void switch_mode() {
 }
 
 
-// Writing to log files "exeuction#.txt":
+// Writing to log file "exeuction#.txt":
 void write_log_file(const char *message, int duration) {
 	if (log_file == NULL) {
         fprintf(stderr, "Error: log_file is not open.\n");
@@ -250,7 +249,7 @@ void write_log_file(const char *message, int duration) {
 }
 
 
-// Writing to log files "system_status.txt":
+// Writing to log file "system_status.txt":
 void print_pcb_entries(unsigned int flag) {
 
 	unsigned int pcb_entries_limit;
@@ -283,6 +282,7 @@ void print_pcb_entries(unsigned int flag) {
 }
 
 
+// Simulating events from "trace.txt" file:
 void trace_events_simulator() {
     int i = 0;
     while (i < trace_event_count) {
@@ -298,6 +298,7 @@ void trace_events_simulator() {
 }
 
 
+// Simulating events from "program#.txt" file:
 void program_events_simulator() {
     int i = 0;
     while (i < program_event_count) {
@@ -318,12 +319,14 @@ void program_events_simulator() {
 }
 
 
+// "Context Save" simulator
 void context_save() {
     int context_save_duration = rand() % 3 +1;  
     write_log_file("context saved", context_save_duration);
 }
 
 
+// Random duration generator used for syscall events:
 void syscall_random_duration_generator(int syscall_random_durations[3], int max_duration) {
     // Randomally generating 3 numbers that add up to "max_duration":
     // And adding the random numbers to "syscall_random_durations" array for usage.
@@ -333,11 +336,13 @@ void syscall_random_duration_generator(int syscall_random_durations[3], int max_
 }
 
 
+// "Check priority of interrupt" simulator:
 void check_interrupt_priority() {
     write_log_file("check priority of interrupt", ONE_MILLISECONDS);
 }
 
 
+// "Check if interrupt is masked" simulator:
 void is_interrupt_masked() {
     write_log_file("check if masked", ONE_MILLISECONDS);
 }
@@ -391,8 +396,8 @@ void end_io_interrupt_handling(int event_duration, int vector_table_position) {
 
 void fork_handler(int event_duration) {
 	char log_message[300];
-	// "copy_init_duration" range is 5 <= copy_init_duration <= event_duration
-	unsigned int copy_init_duration = rand() % (event_duration - 5 +1) +5;
+	// "copy_init_duration" range is 3 < copy_init_duration < event_duration
+	unsigned int copy_init_duration = 3 + rand() % (event_duration - 5 + 1);
     // Finding instructions stored in memory address associated with vector table position:
     strcpy(instruction, instructions[SYSCALL_VECTOR_TABLE_POSITION]);
 
@@ -412,7 +417,7 @@ void fork_handler(int event_duration) {
 
     // Calling scheduler
     // Passing the remaining time of FORK process (event_duration - copy_init_duration) to scheduler:
-    scheduler();
+    scheduler(event_duration - copy_init_duration);
 
 }
 
@@ -456,7 +461,7 @@ void exec_handler(const char *external_file_name, int event_duration) {
     // Allocating partition for program#.txt above:
     allocate_partition(current_program_size, current_program_name, -1);
     
-    scheduler();
+    scheduler(10);
     
     switch_mode();
     
@@ -504,8 +509,8 @@ void end_io_interrupt_simulator(int event_duration, int vector_table_position) {
 }
 
 
-void scheduler(void) {
-    write_log_file("scheduler called", 10);
+void scheduler(unsigned int duration) {
+    write_log_file("scheduler called", duration);
 }
 
 
@@ -649,7 +654,6 @@ int main(int argc, char *argv[]) {
     
     read_external_files(argv[4]);
     read_vector_table(argv[5]);
-    
 
     // Initialize the init process (PID 0) with :
     create_init_process();
