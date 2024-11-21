@@ -1,10 +1,10 @@
-// interrupts_wajd_mariam_abed_qubbaj.h
+// schedulers_101225633_101205030_H.h
 #include <stdio.h>
 #include <stdbool.h>
-#ifndef INTERRUPTS_WAJD_MARIAM_ABED_QUBBAJ_H
-#define INTERRUPTS_WAJD_MARIAM_ABED_QUBBAJ_H
+#ifndef SCHEDULERS_101225633_101205030_H
+#define SCHEDULERS_101225633_101205030_H
 
-// Define constants
+// Define macros
 #define MAX_EVENTS 1000
 #define MAX_EXTERNAL_FILES 100
 #define MAX_PCB_ENTRIES 20
@@ -52,9 +52,11 @@ typedef struct {
 // PCB struct declaration
 typedef struct {
     unsigned int pid;
-    char program_name[20];
-    unsigned int partition_number;
-    unsigned int program_size;
+    unsigned int memory_size;
+    unsigned int arrival_time;
+    unsigned int total_cpu_time;
+    unsigned int io_frequency;
+    unsigned int io_duration;
 } PCB;
 
 // ExternalFiles struct declaration
@@ -96,4 +98,4 @@ void copy_init_process(int copy_init_duration);
 void allocate_partition(unsigned int program_size, const char *program_name, unsigned int process_type);
 void print_pcb_entries(unsigned int flag);
  
-#endif  // INTERRUPTS_WAJD_MARIAM_ABED_QUBBAJ_H
+#endif  // SCHEDULERS_101225633_101205030_H

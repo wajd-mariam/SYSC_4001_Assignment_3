@@ -9,7 +9,7 @@
 #include <time.h>
 #include <string.h>
 #include <limits.h>
-#include "interrupts_wajd-mariam_abed-qubbaj.h"
+#include "schedulers_101225633_101205030.h"
 
 // Mode set to user mode by default:
 int mode = USER_MODE;
@@ -19,18 +19,18 @@ int current_mode = USER_MODE; // Default Mode
 TraceEvent trace_events[MAX_EVENTS];
 ExternalFiles external_files[MAX_EXTERNAL_FILES];
 ProgramEvent program_events[MAX_EVENTS];
-PCB pcb_entries[MAX_PCB_ENTRIES];
+PCB pcb_fcfs_entries[MAX_PCB_ENTRIES];
 MemoryPartition memory_partitions[NUM_PARTITIONS];
 
-// Local Variables
+// Global Variables
+char scheduler_mode[30];
 char instructions[25][7];
 char instruction[10];
 int current_time = 0;
 
 // Files:
-FILE *log_file;
-FILE *system_status_log_file;
-FILE *external_files_txt_file;
+FILE *execution_output_file;
+FILE *memory_output_file;
 FILE *vector_table_txt_file;
 
 // Initializing an array to store the random durations of SYSCALL events:
@@ -54,64 +54,61 @@ MemoryPartition memory_partitions[NUM_PARTITIONS] = {
 };
 
 
-// Reading "trace.txt" file and storing valid events in "trace_events" array:
-void read_trace_file(const char *filename) {
-    FILE *trace_file = fopen(filename, "r");
+// Reading "input_data.txt" file and storing valid data in PCB:
+void read_input_data_file(const char *filename) {
+    FILE *input_data_file = fopen(filename, "r");
     char line[100];
-    int line_number = 0;
-    int vector_number;
-    unsigned program_number;
-    
-	
-	// No valid file
-    if (trace_file == NULL) {
+    unsigned process_counter = 0;
+    int pid;
+    int memory_size;
+    int arrival_time;
+    int total_cpu_time;
+    int io_frequency;
+    int io_duration;
+
+    // No valid file
+    if (input_data_file == NULL) {
         printf("Error opening trace.txt\n");
         exit(1);
     }
 
-    // Looping through each line in the file:
-    while (fgets(line, sizeof(line), trace_file)) {
-        char trace_event[30];
-        char program_file_name[20];
-        int duration;
-        char full_program_name[30];
+    // Looping through each line in the "input_data.txt" file:
+    while (fgets(line, sizeof(line), input_data_file)) {
+
+	process_counter++;
 	
-		line_number++;
-	
-        // Parse the event type, vector table number (if applicable), and duration from each line:
-        // Checking if the current line matches "FORK, %d":
-        if (sscanf(line, "FORK, %d", &duration) == 1) {
-            if (duration > 0) {  // Validate that duration is not zero
-            	// Set the event type and duration in the trace_events array of struct
-            	strcpy(trace_events[trace_event_count].event_type, "FORK");
-            	trace_events[trace_event_count].event_duration = duration;
-            	// Set ".external_program" field in struct to "NONE" so struct can be usable for "EXEC" processes:
-            	strcpy(trace_events[trace_event_count].external_program, "NONE"); 
-            	trace_event_count++;
-	    	} else {
-	        fprintf(stderr, "WARNING: Invalid duration on line %d: %s\n", line_number, line);
-	    	}
- 
-        // Checking if the current line matches "EXEC program%d, %d":
-        } else if (sscanf(line, "EXEC program%d, %d", &program_number, &duration) == 2) {
-            if (duration > 0) {  // Validate that duration is not zero
-                // Formatting full program name:
-                snprintf(full_program_name, sizeof(full_program_name), "program%d.txt", program_number);
-            	// Format the event type as "EXEC program#, <duration>"
-            	strcpy(trace_events[trace_event_count].event_type, "EXEC");
-            	trace_events[trace_event_count].event_duration = duration;
-            	strcpy(trace_events[trace_event_count].external_program, full_program_name);
-            	trace_event_count++;
-            } else {
-            	fprintf(stderr, "WARNING: Invalid duration on line %d: %s\n", line_number, line);
+        // Parse the process data from each line:
+        // Checking if the current line matches "%d, %d, %d, %d, %d, %d":
+        if (sscanf(line, "%d, %d, %d, %d, %d, %d", &pid, &memory_size, &arrival_time, &total_cpu_time, &io_frequency, &io_duration) == 6) {
+            // Validate that none of the values is less than 0:
+            if (pid >= 0 && memory_size >= 0 && arrival_time >= 0 && total_cpu_time >= 0 && io_frequency >= 0 && io_duration >= 0) {
+                // Incrementing process_counter ONLY for valid process' data:
+                process_counter++;
+                
+                // Storing valid process' data in PCB:
+                pcb_fcfs_entries[process_counter].pid = pid;
+                pcb_fcfs_entries[process_counter].memory_size = memory_size;
+                pcb_fcfs_entries[process_counter].arrival_time = arrival_time;
+                pcb_fcfs_entries[process_counter].total_cpu_time = total_cpu_time;
+                pcb_fcfs_entries[process_counter].io_frequency = io_frequency;
+                pcb_fcfs_entries[process_counter].io_duration = io_duration;
             }
         } else {
-            fprintf(stderr, "WARNING: Unrecognized form on line %d: %s\n", line_number, line);
+            fprintf(stderr, "WARNING: Invalid data %d: %s\n", process_counter, line);
             continue;
         }
-
+	
+	// print contents of array of structs:
+	for(int i = 0; i < process_counter; i++) {
+	    printf("PID: %d\n", pcb_fcfs_entries[process_counter].pid);
+	    printf("memory size: %d\n", pcb_fcfs_entries[process_counter].memory_size);
+	    printf("arrival time: %d\n", pcb_fcfs_entries[process_counter].arrival_time);
+	    printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_cpu_time);
+	    printf("io frequency: %d\n", pcb_fcfs_entries[process_counter].io_frequency);
+	    printf("io duration: %d\n", pcb_fcfs_entries[process_counter].io_duration);
+	}
     }
-    fclose(trace_file);
+    fclose(input_data_file);
 }
 
 
@@ -248,7 +245,7 @@ void write_log_file(const char *message, int duration) {
     current_time += duration;  // Increment current time by the event duration
 }
 
-
+/**
 // Writing to log file "system_status.txt":
 void print_pcb_entries(unsigned int flag) {
 
@@ -280,7 +277,7 @@ void print_pcb_entries(unsigned int flag) {
     fprintf(system_status_log_file, "!-------------------------------------------------!\n");
     fprintf(system_status_log_file, "!-------------------------------------------------!\n");
 }
-
+*/
 
 // Simulating events from "trace.txt" file:
 void trace_events_simulator() {
@@ -520,22 +517,7 @@ void create_init_process() {
 }
 
 
-// Copying "init" process and adding it at the end of "pcb_entries" array (@ pcb_counter);
-void copy_init_process(int copy_init_duration) {
-    if ((pcb_counter) < MAX_PCB_ENTRIES) {
-        pcb_entries[pcb_counter].pid = pcb_entries[0].pid;
-    	//strcpy(pcb_entries[pcb_counter+1].program_name, pcb_entries[0].program_name);
-    	strcpy(pcb_entries[pcb_counter].program_name, pcb_entries[0].program_name);
-    	pcb_entries[pcb_counter].partition_number = pcb_entries[0].partition_number;
-    	pcb_entries[pcb_counter].program_size = pcb_entries[0].program_size;
-
-    	print_pcb_entries(0); // Flag is 0 for copying "init" process
-    	
-    	write_log_file("FORK: Copy parent PCB to child PCB", copy_init_duration);
-    }
-}
-
-
+/**
 void allocate_partition(unsigned int program_size, const char *program_name, unsigned int process_type) {
     int best_index = -1;
     char log_message[100];
@@ -607,51 +589,40 @@ void allocate_partition(unsigned int program_size, const char *program_name, uns
 		printf("Error: No suitable partition available for program %s requiring %d MB.\n", program_name, program_size);
 		}
 	}
-}
+}*/
 
 
 int main(int argc, char *argv[]) {
 
-	srand(time(NULL));  // Seed for random number generation
+    srand(time(NULL));  // Seed for random number generation
 
-	// READING FILES
+    // READING FILES
     // Reading arguments from "test#.sh" file
     if (argc < 3) {
         printf("Usage: %s <tracefile> <executionfile>\n", argv[0]);
         return 1;
     }
     
-    // Use the first argument as the trace.txt file
-    read_trace_file(argv[1]);
+    // Use the first argument as the input_data.txt file
+    read_input_data_file(argv[1]);
     
     // Use the second argument as the execution.txt file
-    log_file = fopen(argv[2], "w");
-    if (log_file == NULL) {
+    execution_output_file = fopen(argv[2], "w");
+    if (execution_output_file == NULL) {
         printf("Error opening %s\n", argv[2]);
         return 1;
     }
     
-    // Use the third argument as the system_status.txt file
-    system_status_log_file = fopen(argv[3], "w");
-    if (system_status_log_file == NULL) {
+    // Use the third argument as the memory_status.txt file
+    memory_output_file = fopen(argv[3], "w");
+    if (memory_output_file == NULL) {
         printf("Error opening %s\n", argv[3]);
         return 1;
     }
     
-    // Use the third argument as the system_log.txt file
-    external_files_txt_file = fopen(argv[4], "r");
-    if (external_files_txt_file == NULL) {
-        printf("Error opening %s\n", argv[3]);
-        return 1;
-    }
-    
-    // Use the fourth argument as the vector_table.txt file
-    vector_table_txt_file = fopen(argv[5], "r");
-    if (vector_table_txt_file == NULL) {
-        printf("Error opening %s\n", argv[3]);
-        return 1;
-    }
-    
+    // Use the fourth argument as the scheduler used
+    //scheduler_mode = argv[4];
+
     read_external_files(argv[4]);
     read_vector_table(argv[5]);
 
@@ -659,12 +630,12 @@ int main(int argc, char *argv[]) {
     create_init_process();
 	
 
-	// Simulating events from trace file: FORK, EXEC
+    // Simulating events from trace file: FORK, EXEC
     trace_events_simulator();
     
     // Close the log file
-    fclose(log_file);
-    fclose(system_status_log_file);
+    fclose(execution_output_file);
+    fclose(memory_output_file);
     printf("Simulation complete. Check execution files for details.\n");
 
     return 0;
