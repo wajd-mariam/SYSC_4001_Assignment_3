@@ -1,3 +1,0 @@
-#!/bin/bash
-gcc interrupts_wajd-mariam_abed-qubbaj.c -o sim
-./sim trace_wajd-mariam_abed-qubbaj.txt execution_wajd-mariam_abed-qubbaj.txt system_status_wajd-mariam_abed-qubbaj.txt external_files_wajd-mariam_abed-qubbaj.txt vector_table_wajd-mariam_abed-qubbaj.txt

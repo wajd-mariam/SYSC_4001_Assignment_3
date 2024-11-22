@@ -7,12 +7,8 @@
 // Define macros
 #define MAX_EVENTS 1000
 #define MAX_EXTERNAL_FILES 100
+#define MAX_READY_QUEUE_ENTRIES 100
 #define MAX_PCB_ENTRIES 20
-#define KERNEL_MODE 1
-#define USER_MODE 0
-#define ONE_MILLISECONDS 1
-#define SYSCALL_VECTOR_TABLE_POSITION 2
-#define EXEC_VECTOR_TABLE_POSITION 3
 #define NUM_PARTITIONS 6
 
 // Declare global variables
@@ -23,33 +19,9 @@ extern int current_mode;
 extern FILE *log_file;
 extern FILE *system_status_log_file;
 extern FILE *vector_table_file;
-extern int vector_table[25];
-extern int syscall_random_durations[3];
-extern int exec_random_durations[5];
 
-// TraceEvent struct declaration
-typedef struct {
-    char event_type[10];
-    int event_duration;
-    char external_program[30];
-} TraceEvent;
 
-// MemoryPartition struct declaration
-typedef struct {
-    unsigned int partition_number;
-    unsigned int size;
-    char code[20]; 
-    bool status; // 0 for unused, 1 for used
-} MemoryPartition;
-
-// ProgramEvent struct declaration
-typedef struct {
-    char event_type[10];
-    int event_duration;
-    int vector_table_position;
-} ProgramEvent;
-
-// PCB struct declaration
+// Process struct containting process' information
 typedef struct {
     unsigned int pid;
     unsigned int memory_size;
@@ -57,20 +29,25 @@ typedef struct {
     unsigned int total_cpu_time;
     unsigned int io_frequency;
     unsigned int io_duration;
-} PCB;
+    char process_status[30];
+} Process;
 
-// ExternalFiles struct declaration
+
+// MemoryPartition struct declaration
 typedef struct {
-    char program_name[30];
-    unsigned int program_size;
-} ExternalFiles;
+    unsigned int partition_number;
+    unsigned int size;
+    bool status; // -1 if unused, PID if used
+} MemoryPartition;
 
 // Declare arrays
-extern TraceEvent trace_events[MAX_EVENTS];
-extern ProgramEvent program_events[MAX_EVENTS];
 extern MemoryPartition memory_partitions[NUM_PARTITIONS]; 
 
 // Method declarations
+void read_input_data_file(const char *filename);
+void fcfs_simulator(void);
+
+
 void read_trace_file(const char *filename);
 void read_vector_table(const char *filename);
 void read_external_files(const char *filename);
