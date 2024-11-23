@@ -88,16 +88,9 @@ void read_input_data_file(const char *filename) {
         }
     }
 
-    // print contents of array of structs:
-	for(int i = 0; i < process_counter; i++) {
-	    printf("PID: %d\n", pcb_fcfs_entries[process_counter].pid);
-	    printf("memory size: %d\n", pcb_fcfs_entries[process_counter].memory_size);
-	    printf("arrival time: %d\n", pcb_fcfs_entries[process_counter].arrival_time);
-	    printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_burst_time);
-	    printf("io frequency: %d\n", pcb_fcfs_entries[process_counter].io_frequency);
-	    printf("io duration: %d\n", pcb_fcfs_entries[process_counter].io_duration);
-	    printf("process' status: %s\n", pcb_fcfs_entries[process_counter].process_status);
-	}
+    //print_pcb_entries();
+
+	fcfs_simulator();
 
     fclose(input_data_file);
 }
@@ -105,12 +98,12 @@ void read_input_data_file(const char *filename) {
 void print_pcb_entries(void) {
     for(int i = 0; i < process_counter; i++) {
         printf("PID: %d\n", pcb_fcfs_entries[process_counter].pid);
-	printf("memory size: %d\n", pcb_fcfs_entries[process_counter].memory_size);
-	printf("arrival time: %d\n", pcb_fcfs_entries[process_counter].arrival_time);
-	printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_burst_time);
-	printf("io frequency: %d\n", pcb_fcfs_entries[process_counter].io_frequency);
-	printf("io duration: %d\n", pcb_fcfs_entries[process_counter].io_duration);
-	printf("process' status: %s\n", pcb_fcfs_entries[process_counter].process_status);
+		printf("memory size: %d\n", pcb_fcfs_entries[process_counter].memory_size);
+		printf("arrival time: %d\n", pcb_fcfs_entries[process_counter].arrival_time);
+		printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_burst_time);
+		printf("io frequency: %d\n", pcb_fcfs_entries[process_counter].io_frequency);
+		printf("io duration: %d\n", pcb_fcfs_entries[process_counter].io_duration);
+		printf("process' status: %s\n", pcb_fcfs_entries[process_counter].process_status);
     }
 }
 
@@ -128,6 +121,7 @@ void fcfs_simulator() {
 
     	    	// If partition was successfully allocated:
     	    	if (partition_allocated) {
+    	    		completed_processes++;
     	            // Mark process status as "READY" and add it to "ready_queue":
     	            strcmp(pcb_fcfs_entries[i].process_status, "READY");
     	    	    enqueue_ready_queue(i); // Enqueue current process	
@@ -139,12 +133,16 @@ void fcfs_simulator() {
     	    }
         }
     }
+    
+    
 
 	// Calling scheudler to run processes in "ready_queue":
 }	
 
 void enqueue_ready_queue(unsigned int process_index) {
     ready_queue[ready_queue_size++] = pcb_fcfs_entries[process_index];
+    printf("\nAFTER ENQUEUING ready_queue.\n");
+    print_pcb_entries();
 }
 
 Process dequeue_read_queue() {
@@ -154,6 +152,30 @@ Process dequeue_read_queue() {
 		return;
 	}
 }
+
+
+bool allocate_partition(unsigned int process_index) {
+    int best_index = -1;
+    int memory_required = pcb_fcfs_entries[process_index].memory_size;
+    int pid = pcb_fcfs_entries[process_index].pid;
+
+    // Find the best-fit partition
+    for (int i = 0; i < NUM_PARTITIONS; i++) {
+        if(memory_partitions[i].size >= memory_required && 
+            memory_partitions[i].status == -1) {
+			// Memory partition successfully allocated for process:
+			memory_partitions[i].status = pid; // Updating partitions' status with PID
+			pcb_fcfs_entries[i].allocated_partition_number = i;
+			
+			return true;
+        }
+    }
+    
+    // No sutiable partition found -> return false
+    return false;
+}
+
+
 /**
 // Writing to log file "exeuction#.txt":
 void write_log_file(const char *message, int duration) {
@@ -201,53 +223,6 @@ void print_pcb_entries(unsigned int flag) {
 */
 
 
-bool allocate_partition(unsigned int process_index) {
-    int best_index = -1;
-    int memory_required = pcb_fcfs_entries[process_index].memory_size;
-    int pid = pcb_fcfs_entries[process_index].pid;
-
-    // Find the best-fit partition
-    for (int i = 0; i < NUM_PARTITIONS; i++) {
-        if(memory_partitions[i].size >= memory_required && 
-            memory_partitions[i].status == -1) {
-			// Memory partition successfully allocated for process:
-			memory_partitions[i].status = pid; // Updating partitions' status with PID
-			pcb_fcfs_entries[i].allocated_partition_number = i;
-			
-			return true;
-        }
-    }
-    
-    // No sutiable partition found -> return false
-    return false;
-}
-
-	/**
-	// process_type = 0 is "init" process
-	if (process_type == 0) {
-    	if (best_index != -1) {
-    		strcpy(memory_partitions[best_index].code, program_name);
-
-			// Update the PCB table with the partition information for the process:
-			if (pcb_counter < MAX_PCB_ENTRIES) {
-    			//write_log_file(log_message2, 6);
-			    pcb_entries[pcb_counter].pid = pcb_counter;
-			    strcpy(pcb_entries[pcb_counter].program_name, program_name);
-			    pcb_entries[pcb_counter].partition_number = memory_partitions[best_index].partition_number;
-			    pcb_entries[pcb_counter].program_size = program_size;
-
-			    pcb_counter++;
-			    print_pcb_entries(1);
-			  
-			} else {
-				printf("Error: PCB table is full. Cannot add new process.\n");
-			}
-		} else {
-		printf("Error: No suitable partition available for program %s requiring %d MB.\n", program_name, program_size);
-		}
-	}
-}
-*/
 int main(int argc, char *argv[]) {
 
     srand(time(NULL));  // Seed for random number generation
