@@ -12,9 +12,6 @@
 #include <limits.h>
 #include "schedulers_101225633_101205030.h"
 
-// Mode set to user mode by default:
-int mode = USER_MODE;
-int current_mode = USER_MODE; // Default Mode
 
 // Array of Structs:
 Process pcb_fcfs_entries[MAX_PCB_ENTRIES];
@@ -55,7 +52,7 @@ void read_input_data_file(const char *filename) {
     int pid;
     int memory_size;
     int arrival_time;
-    int total_cpu_time;
+    int total_burst_time;
     int io_frequency;
     int io_duration;
 
@@ -70,16 +67,16 @@ void read_input_data_file(const char *filename) {
 
         // Parse the process data from each line:
         // Checking if the current line matches "%d, %d, %d, %d, %d, %d":
-        if (sscanf(line, "%d, %d, %d, %d, %d, %d", &pid, &memory_size, &arrival_time, &total_cpu_time, &io_frequency, &io_duration) == 6) {
+        if (sscanf(line, "%d, %d, %d, %d, %d, %d", &pid, &memory_size, &arrival_time, &total_burst_time, &io_frequency, &io_duration) == 6) {
             // Validate that none of the values is less than 0:
-            if (pid >= 0 && memory_size >= 0 && arrival_time >= 0 && total_cpu_time >= 0 && io_frequency >= 0 && io_duration >= 0) {
+            if (pid >= 0 && memory_size >= 0 && arrival_time >= 0 && total_burst_time >= 0 && io_frequency >= 0 && io_duration >= 0) {
                 // Incrementing process_counter ONLY for valid process' data:
                 process_counter++;
                 // Storing valid process' data in PCB:
                 pcb_fcfs_entries[process_counter].pid = pid;
                 pcb_fcfs_entries[process_counter].memory_size = memory_size;
                 pcb_fcfs_entries[process_counter].arrival_time = arrival_time;
-                pcb_fcfs_entries[process_counter].total_cpu_time = total_cpu_time;
+                pcb_fcfs_entries[process_counter].total_burst_time = total_burst_time;
                 pcb_fcfs_entries[process_counter].io_frequency = io_frequency;
                 pcb_fcfs_entries[process_counter].io_duration = io_duration;
                 // Initially setting "process_status" to "NEW" for all processes:
@@ -96,7 +93,7 @@ void read_input_data_file(const char *filename) {
 	    printf("PID: %d\n", pcb_fcfs_entries[process_counter].pid);
 	    printf("memory size: %d\n", pcb_fcfs_entries[process_counter].memory_size);
 	    printf("arrival time: %d\n", pcb_fcfs_entries[process_counter].arrival_time);
-	    printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_cpu_time);
+	    printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_burst_time);
 	    printf("io frequency: %d\n", pcb_fcfs_entries[process_counter].io_frequency);
 	    printf("io duration: %d\n", pcb_fcfs_entries[process_counter].io_duration);
 	    printf("process' status: %s\n", pcb_fcfs_entries[process_counter].process_status);
@@ -110,7 +107,7 @@ void print_pcb_entries(void) {
         printf("PID: %d\n", pcb_fcfs_entries[process_counter].pid);
 	printf("memory size: %d\n", pcb_fcfs_entries[process_counter].memory_size);
 	printf("arrival time: %d\n", pcb_fcfs_entries[process_counter].arrival_time);
-	printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_cpu_time);
+	printf("total_cpu_time: %d\n", pcb_fcfs_entries[process_counter].total_burst_time);
 	printf("io frequency: %d\n", pcb_fcfs_entries[process_counter].io_frequency);
 	printf("io duration: %d\n", pcb_fcfs_entries[process_counter].io_duration);
 	printf("process' status: %s\n", pcb_fcfs_entries[process_counter].process_status);
@@ -204,24 +201,26 @@ void print_pcb_entries(unsigned int flag) {
 */
 
 
-bool allocate_partition(unsigned int process_pcb_entry) {
+bool allocate_partition(unsigned int process_index) {
     int best_index = -1;
-    char log_message[100];
-
-    int counter;
-    counter = pcb_counter;
+    int memory_required = pcb_fcfs_entries[process_index].memory_size;
+    int pid = pcb_fcfs_entries[process_index].pid;
 
     // Find the best-fit partition
     for (int i = 0; i < NUM_PARTITIONS; i++) {
-        if(memory_partitions[i].code, "free") == 0 && // Checking if current partition is marked as "free"
-            memory_partitions[i].size >= program_size &&  // Checking if current partition's size is > program size 
-            // Checking if best_index == -1 (partition has not be assigned) OR if current partition is less than 
-            // memory_partiton @best_index:
-            (best_index == -1 || memory_partitions[i].size < memory_partitions[best_index].size)) { 
-
-            best_index = i;
+        if(memory_partitions[i].size >= memory_required && 
+            memory_partitions[i].status == -1) {
+			// Memory partition successfully allocated for process:
+			memory_partitions[i].status = pid; // Updating partitions' status with PID
+			pcb_fcfs_entries[i].allocated_partition_number = i;
+			
+			return true;
         }
     }
+    
+    // No sutiable partition found -> return false
+    return false;
+}
 
 	/**
 	// process_type = 0 is "init" process
@@ -248,7 +247,7 @@ bool allocate_partition(unsigned int process_pcb_entry) {
 		}
 	}
 }
-
+*/
 int main(int argc, char *argv[]) {
 
     srand(time(NULL));  // Seed for random number generation
