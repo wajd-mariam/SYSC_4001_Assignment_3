@@ -26,7 +26,8 @@ typedef struct {
     unsigned int pid;
     unsigned int memory_size;
     unsigned int arrival_time;
-    unsigned int total_cpu_time;
+    unsigned int total_burst_time;
+    unsigned int remaining_burst_time;
     unsigned int io_frequency;
     unsigned int io_duration;
     char process_status[30];
@@ -45,8 +46,10 @@ extern MemoryPartition memory_partitions[NUM_PARTITIONS];
 
 // Method declarations
 void read_input_data_file(const char *filename);
+void print_pcb_entries(void);
 void fcfs_simulator(void);
-
+void enqueue_ready_queue(unsigned int process_index);
+void dequeue_read_queue(void);
 
 void read_trace_file(const char *filename);
 void read_vector_table(const char *filename);
