@@ -12,10 +12,6 @@
 #define NUM_PARTITIONS 6
 
 // Declare global variables
-extern int mode;
-extern int event_count;
-extern int current_time;
-extern int current_mode;
 extern FILE *log_file;
 extern FILE *system_status_log_file;
 extern FILE *vector_table_file;
@@ -48,13 +44,12 @@ extern MemoryPartition memory_partitions[NUM_PARTITIONS];
 // Method declarations
 void read_input_data_file(const char *filename);
 void print_pcb_entries(void);
+void print_ready_queue_entries(void);
 void fcfs_simulator(void);
 void enqueue_ready_queue(unsigned int process_index);
-Process dequeue_read_queue(void);
+Process dequeue_ready_queue(void);
 bool allocate_partition(unsigned int process_index);
+void fcfs_scheduler(void);
+void print_memory_partitions(print_memory_partitions);
 
-
-
-
- 
 #endif  // SCHEDULERS_101225633_101205030_H
