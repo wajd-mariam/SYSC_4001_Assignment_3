@@ -46,7 +46,7 @@ void read_input_data_file(const char *filename);
 void print_pcb_entries(void);
 void print_ready_queue_entries(void);
 void fcfs_simulator(void);
-void enqueue_ready_queue(unsigned int process_index);
+void enqueue_ready_queue(Process process_to_enqueue);
 Process dequeue_ready_queue(void);
 bool allocate_partition(unsigned int process_index);
 void schedule_fcfs_ready_queue(void);

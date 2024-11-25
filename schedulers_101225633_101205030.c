@@ -147,7 +147,8 @@ void fcfs_simulator() {
     	            // Mark process status as "READY" and add it to "ready_queue":
     	            strcmp(pcb_fcfs_entries[i].process_status, "READY");
                     // Storing current process that got memory allocated in a Process struct:
-    	    	    enqueue_ready_queue(i); // Enqueue current process
+                    Process current_process = pcb_fcfs_entries[i];
+    	    	    enqueue_ready_queue(current_process); // Enqueue current process
     	    	}
     	    	// Process was not allocated memory:
     	    	else {
@@ -161,10 +162,10 @@ void fcfs_simulator() {
     }
 }
 
-void enqueue_ready_queue(unsigned int process_index) {
-    ready_queue[ready_queue_size++] = pcb_fcfs_entries[process_index];
+void enqueue_ready_queue(Process process_to_enqueue) {
+    ready_queue[ready_queue_size++] = process_to_enqueue;
     // Changing process status' to READY:
-    strcpy(pcb_fcfs_entries[process_index].process_status, "READY");
+    strcpy(process_to_enqueue.process_status, "READY");
     printf("\nAFTER ENQUEUING ready_queue.\n");
     print_ready_queue_entries();
 }
