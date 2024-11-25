@@ -49,7 +49,7 @@ void fcfs_simulator(void);
 void enqueue_ready_queue(unsigned int process_index);
 Process dequeue_ready_queue(void);
 bool allocate_partition(unsigned int process_index);
-void fcfs_scheduler(void);
-void print_memory_partitions(print_memory_partitions);
+void schedule_fcfs_ready_queue(void);
+void print_memory_partitions();
 
 #endif  // SCHEDULERS_101225633_101205030_H
