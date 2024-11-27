@@ -34,6 +34,7 @@ static unsigned int ready_queue_size = 0;
 
 static int pcb_counter = 0;
 static int save_time = 0;
+static int completed_processes = 0;
 
 // Defining memory_partitions array:
 MemoryPartition memory_partitions[NUM_PARTITIONS] = {
@@ -66,7 +67,7 @@ void read_input_data_file(const char *filename) {
 
     // Looping through each line in the "input_data.txt" file:
     while (fgets(line, sizeof(line), input_data_file)) {
-		
+		printf("LINE %d: %s\n", line_number, line);
         // Parse the process data from each line:
         // Checking if the current line matches "%d, %d, %d, %d, %d, %d":
         if (sscanf(line, "%d, %d, %d, %d, %d, %d", &pid, &memory_size, &arrival_time, &total_burst_time, &io_frequency, &io_duration) == 6) {
@@ -94,11 +95,13 @@ void read_input_data_file(const char *filename) {
         line_number++;
     }
 
-    //print_pcb_entries();
+    printf("Finishing reading file\n");
+    printf("PROCESS COUNTER VALUE AT READ FILE: %d\n", process_counter);
     fcfs_simulator();
 
     fclose(input_data_file);
 }
+
 
 void print_pcb_entries(void) {
 	printf("\nCURRENT ENTRIES IN PCB.\n");
@@ -113,6 +116,7 @@ void print_pcb_entries(void) {
 		printf("\n");
     }
 }
+
 
 void print_ready_queue_entries(void) {
 	printf("\nCURRENT ENTRIES IN READY QUEUE.\n");
@@ -129,26 +133,23 @@ void print_ready_queue_entries(void) {
     }
 }
 
-void fcfs_simulator() {
-    int completed_processes = 0;
-    bool partition_allocated;
 
+void fcfs_simulator() {
+    bool partition_allocated;
+    printf("PROCESS COUNTER VALUE AT FCFS SIM: %d\n", process_counter);
+    printf("COMPLETED PROCESSES COUNTER VALUE AT FCFS SIM: %d\n", completed_processes);
     while (completed_processes < process_counter)  {
-    	
+
     	for (int i = 0; i < process_counter; i++) {
     	    if ((pcb_fcfs_entries[i].arrival_time <= current_time) && strcmp(pcb_fcfs_entries[i].process_status, "NEW") == 0) {
-    	        printf("FLAG2\n");
 	        	// Allocate memory partition for process:
     	    	partition_allocated = allocate_partition(i);
 				
     	    	// If partition was successfully allocated:
     	    	if (partition_allocated) {
-    	    		completed_processes++;
     	            // Mark process status as "READY" and add it to "ready_queue":
-    	            strcmp(pcb_fcfs_entries[i].process_status, "READY");
-                    // Storing current process that got memory allocated in a Process struct:
-                    Process current_process = pcb_fcfs_entries[i];
-    	    	    enqueue_ready_queue(current_process); // Enqueue current process
+    	            strcpy(pcb_fcfs_entries[i].process_status, "READY");
+    	    	    enqueue_ready_queue(pcb_fcfs_entries[i]); // Enqueue current process
     	    	}
     	    	// Process was not allocated memory:
     	    	else {
@@ -157,24 +158,35 @@ void fcfs_simulator() {
     	    	}
     	    }
         }
-        // Calling scheudler to run processes in "ready_queue":
         schedule_fcfs_ready_queue();
+        current_time++;
+        // Safety check: Ensure completed_processes is updated:
+        printf("Completed processes: %d\n", completed_processes);
     }
+
 }
 
+
 void enqueue_ready_queue(Process process_to_enqueue) {
+    printf("READY QUEUE SIZE: %d\n", ready_queue_size); 
+    if (ready_queue_size >= MAX_READY_QUEUE_ENTRIES) {
+        printf("Error: Ready queue is full! Cannot enqueue PID %d.\n", process_to_enqueue.pid);
+        return;
+    }
     ready_queue[ready_queue_size++] = process_to_enqueue;
     // Changing process status' to READY:
     strcpy(process_to_enqueue.process_status, "READY");
+
     printf("\nAFTER ENQUEUING ready_queue.\n");
     print_ready_queue_entries();
 }
 
 
 Process dequeue_ready_queue() {
-	Process empty_process = {-1, -1, -1, -1, -1, -1, "EMPTY"};
-
-	if (ready_queue_size == 0) {
+	Process empty_process = {-1, -1, -1, -1, -1, -1};
+    strcpy(empty_process.process_status, "EMPTY");
+    printf("ready_queue_size before dequeuing: %d\n", ready_queue_size);
+	if (ready_queue_size <= 0) {
 		printf("Ready queue is empty. Cannot dequeue.\n");
 		return empty_process;
 	}
@@ -196,21 +208,23 @@ Process dequeue_ready_queue() {
 	return dequeued_process; 
 }
 
+
 void print_memory_partitions() {
     //
     for (int i = NUM_PARTITIONS - 1; i >= 0; i--) {	
         printf("PARTITION NUMBERat i=%d is %d\n", i, memory_partitions[i].partition_number); 
         printf("MEMORY PARTITION at i=%d is %d\n", i, memory_partitions[i].size);
         printf("MEMORY PARTITION status at i=%d is %d\n", i, memory_partitions[i].status);
-
     }
 }
+
+
 bool allocate_partition(unsigned int process_index) {
     int best_index = -1;
     int memory_required = pcb_fcfs_entries[process_index].memory_size;
     int pid = pcb_fcfs_entries[process_index].pid;
 	printf("Memory Required-------------:%d\n", memory_required);
-    // Find the best-fit partition - starting from smallest to largest:
+    // Find the best-fit partition - starting from smallest to largest partition:
     for (int i = NUM_PARTITIONS - 1; i >= 0; i--) {
     	printf("MEMORY PARTITION at i=%d is %d\n", i, memory_partitions[i].size);
         if(memory_partitions[i].size >= memory_required &&
@@ -227,11 +241,9 @@ bool allocate_partition(unsigned int process_index) {
     return false;
 }
 
+
 void schedule_fcfs_ready_queue() {
-	
-	
-	
-	
+
 	printf("Starting FCFS Scheduling...\n");
 	// Looping through processes in ready_queue:
 	while (ready_queue_size > 0) {
@@ -245,30 +257,41 @@ void schedule_fcfs_ready_queue() {
 		// Begin CPU execution:
 		int time_slice = currently_processsing_process.io_frequency;
 		int remaining_cpu_burst = currently_processsing_process.remaining_burst_time;
-		ready_queue_size--;
-		// Begin CPU execution: 
-		while (remaining_cpu_burst > 0) {
+
+		//ready_queue_size--;
+        completed_processes++;
+
+		// Begin CPU execution:
+		/**while (remaining_cpu_burst > 0) {
+            printf("GETTING IN CPU EXECTUTION LOOP\n");
 			if (remaining_cpu_burst <= time_slice) {
 				// Process will finish executing without need to perform I/O
+                printf("Process terminated");
 
 			} else {
 				// Process will deal with WAITING for I/O:
-                strcpy(currently_processsing_process.process_status, "WAITING");
-                remaining_cpu_burst -= time_slice;
+                // Begin executing process:
 
                 // Modify current_time to run process until the I/O event (time_slice):
                 current_time += time_slice;
 
-                // Enqueue currently running process to the end of the ready_queue:
-
-                // Call the fcfs_scheduler to run the first process in the "ready_queue":
+                // Enqueue currently running process to the end of the ready_queue & updated its remaining CPU burst time:
+                currently_processsing_process.remaining_burst_time = remaining_cpu_burst;
+                strcpy(currently_processsing_process.process_status, "WAITING");
+                printf("PID: %d\n", currently_processsing_process.pid);
+                printf("memory size: %d\n", currently_processsing_process.memory_size);
+                printf("arrival time: %d\n", currently_processsing_process.arrival_time);
+                printf("total_cpu_time: %d\n", currently_processsing_process.total_burst_time);
+                printf("total_cpu_time: %d\n", currently_processsing_process.remaining_burst_time);
+                printf("io frequency: %d\n", currently_processsing_process.io_frequency);
+                printf("io duration: %d\n", currently_processsing_process.io_duration);
+                printf("process' status: %s\n", currently_processsing_process.process_status);
+                remaining_cpu_burst -= time_slice;
+                //enqueue_ready_queue(currently_processsing_process);
 			}
-            
-        }
+            break;
+        }*/
     }
-				
-		
-			
 }
 	
 
