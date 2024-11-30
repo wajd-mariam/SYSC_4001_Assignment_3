@@ -53,6 +53,6 @@ Process* dequeue_ready_queue(void);
 bool allocate_partition(unsigned int process_index);
 void schedule_fcfs_ready_queue(void);
 void log_header(void);
-void log_transition(int time, Process process, const char *old_state, const char *new_state);
+void log_transition(int time, Process *process, const char *old_state, const char *new_state);
 
 #endif  // SCHEDULERS_101225633_101205030_H

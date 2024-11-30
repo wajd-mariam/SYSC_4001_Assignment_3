@@ -96,7 +96,7 @@ void read_input_data_file(const char *filename) {
     }
     print_pcb_entries();
     printf("Finishing reading file\n");
-    //fcfs_simulator();
+    fcfs_simulator();
 
     fclose(input_data_file);
 }
@@ -104,6 +104,7 @@ void read_input_data_file(const char *filename) {
 
 void print_pcb_entries(void) {
 	printf("\nCURRENT ENTRIES IN PCB.\n");
+    printf("Process counter: %d\n", process_counter);
     for(int i = 0; i < process_counter; i++) {
         Process *current_process = &pcb_fcfs_entries[i];
         printf("PID: %d\n", current_process->pid);
@@ -137,7 +138,6 @@ void print_ready_queue_entries(void) {
 
 
 void fcfs_simulator() {
-    bool partition_allocated;
     
     while (completed_processes < process_counter)  {
         //printf("COMPLETED PROCESSES COUNTER VALUE AT FCFS SIM: %d\n", completed_processes);
@@ -147,47 +147,61 @@ void fcfs_simulator() {
             Process *current_process = &pcb_fcfs_entries[i];
             
             printf("GOING IN FOR LOOP---------------------\n");
+            printf("PROCESS PID: %d\n", current_process->pid);
             printf("Process arrival time:%d\n", current_process->arrival_time);
-            printf("CURRENT TIME VALUE INSIDE LOOP %d\n", current_time);
+            printf("PROCESS BACK FROM WAITING FROM I/O at: %d\n", current_process->io_event_finished);
+            printf("CURRENT PROCESS STATUS: %s\n", current_process->process_status);
+            printf("PROCESS REM CPU BURST: %d\n", current_process->remaining_burst_time);
+            printf("CURRENT TIME VALUE INSIDE LOOP ################################################# %d\n", current_time);
+
             // Checking arrival times for each process in ready queue:
     	    if ((current_process->arrival_time <= current_time) && strcmp(current_process->process_status, "NEW") == 0) {
+                printf("\nADDING A NEW PROCESS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 	        	// Allocate memory partition for process:
-    	    	partition_allocated = allocate_partition(i);
+    	    	bool partition_allocated = allocate_partition(i);
 
-    	    	// If partition was successfully allocated and no processes are being executed by CPU:
+    	    	// If a memory partition was successfully allocated:
     	    	if (partition_allocated) {
                     // No processs are being executed by CPU -> Enqueue to ready queue and call scheduler: 
                     if (!process_currently_running) {
-                        // Mark process status as "READY" and add it to "ready_queue":
-                        strcpy(pcb_fcfs_entries[i].process_status, "READY");
                         enqueue_ready_queue(current_process); // Enqueue current process
-                        // Update "process_currently_running" flag to true as there is a process currently executing in CPU:
-                        process_currently_running = true;
-                        schedule_fcfs_ready_queue();
+                        // Mark process status as "READY":
+                        strcpy(current_process->process_status, "READY");
                     } else { // There is a process running in the CPU -> Enqueue to ready queue only:
                         enqueue_ready_queue(current_process);
                     }
+                    log_transition(current_time, current_process, "NEW", "READY");
     	    	}
-
     	    	// Process was not allocated memory:
     	    	else {
     	    		// Process' status will stay marked as "NEW"
     	    		printf("Time %d: Could not allocate memory for process %d.\n", current_time, pcb_fcfs_entries[i].pid);
     	    	}
-                //completed_processes++;
-              // Currently running process needs an I/O:
-    	    } else if ((strcmp(pcb_fcfs_entries[i].process_status, "RUNNING") == 0) && pcb_fcfs_entries[i].next_io_event == current_time) {
-                log_transition(current_time, pcb_fcfs_entries[i], "RUNNING", "WAITING");
-
+            // Currently running process needs an I/O:
+    	    } else if ((strcmp(current_process->process_status, "RUNNING") == 0) && current_process->next_io_event == current_time) {
+                printf("\nCURRENT PROCESS %d NEEDS I/O!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", current_process->pid);
                 // Updating "io_event_finished" value for this process's struct:
-                pcb_fcfs_entries[i].io_event_finished = current_time + pcb_fcfs_entries[i].io_frequency;
-
-                // Calling scheduler to run next process in the ready queue:
-
-              // Enqueing process after it finished waiting for I/O:
-            } else if ((strcmp(pcb_fcfs_entries[i].process_status, "WAITING") == 0) && pcb_fcfs_entries[i].io_event_finished == current_time) {
-                
+                //current_process->io_event_finished = current_time + current_process->io_frequency;
+                process_currently_running = false;
+                strcpy(current_process->process_status, "WAITING");
+                log_transition(current_time, current_process, "RUNNING", "WAITING");             
+            } 
+            // Enqueing process after it finished waiting for I/O:
+            else if ((strcmp(current_process->process_status, "WAITING") == 0) && current_process->io_event_finished == current_time) {
+                printf("\nPROCESS FINISHED I/O!!!!!!!!!!!!!!!!!!!!!!!!!1\n");
+                log_transition(current_time, current_process, "WAITING", "READY");
+                enqueue_ready_queue(current_process);
             }
+            // Checking if process has completed exectuion: 
+            else if ((strcmp(current_process->process_status, "RUNNING") == 0) && current_process->remaining_burst_time == 0) {
+                printf("\nPROCESS HAS TERMINIATED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+                log_transition(current_time, current_process, "RUNNING", "TERMINATED");  
+                completed_processes++;
+            }
+        }
+
+        if (!process_currently_running && ready_queue_size > 0) {
+            schedule_fcfs_ready_queue();
         }
         
         current_time++;
@@ -270,23 +284,29 @@ void schedule_fcfs_ready_queue() {
 
     // Process is valid; perform operations:
     if (currently_running_process->pid != -1) {
-        // Need to look up this process in PCB and modify it:
-
         // Modify currently_running_process status to "RUNNING":
         strcpy(currently_running_process->process_status, "RUNNING");
         // Log transition change:
-        log_transition(current_time, *currently_running_process,"READY", "RUNNING");
+        log_transition(current_time, currently_running_process,"READY", "RUNNING");
+
+        process_currently_running = true;
 
         // Update process's struct variables:
         currently_running_process->next_io_event = current_time + currently_running_process->io_frequency;
         currently_running_process->io_event_finished = currently_running_process->next_io_event + currently_running_process->io_duration;
-        currently_running_process->remaining_burst_time = currently_running_process->total_burst_time - currently_running_process->io_frequency;
+        currently_running_process->remaining_burst_time = currently_running_process->remaining_burst_time - currently_running_process->io_frequency;
+        printf("PROCESS ID is: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++\n", currently_running_process->pid);
+        printf("Currently running process next_io_event: %d\n", currently_running_process->next_io_event);
+        printf("Currently running process finishes waiting for I/O at : %d\n", currently_running_process->io_event_finished);
+        printf("Currently running process remaining CPU burst time : %d\n", currently_running_process->remaining_burst_time);
 
     } else {
         printf("INVALID PROCESS-EXITING\n");
     }
-    completed_processes++;
+    //completed_processes++;
+    
 }
+
 
 void log_header() {
     if (execution_output_file == NULL) {
@@ -295,22 +315,26 @@ void log_header() {
     }
 
     fprintf(execution_output_file,
-            "+------------------+-----+-------------+-------------+\n"
-            "| Time of Transition | PID | Old State   | New State  |\n"
-            "+------------------+-----+-------------+-------------+\n");
+            "+--------------------+-----+-------------+------------+---------------+\n"
+            "| Time of Transition | PID | Old State   | New State  | REM CPU BURST |\n"
+            "+--------------------+-----+-------------+------------+---------------+\n");
 }
 
 
-void log_transition(int time, Process process, const char *old_state, const char *new_state) {
+void log_transition(int time, Process *process, const char *old_state, const char *new_state) {
     if (execution_output_file == NULL) {
         fprintf(stderr, "Error: Log file is not open.\n");
         return;
     }
 
-    // Print to log file
-    fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s |\n", time, process.pid, old_state, new_state);
-}
+    if (process == NULL) {
+        fprintf(stderr, "Error: Process pointer is NULL");
+        return;
+    }
 
+    // Print to log file
+    fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s | %-11d |\n", time, process->pid, old_state, new_state, process->remaining_burst_time);
+}
 
 
 

@@ -1,0 +1,35 @@
++--------------------+-----+-------------+------------+---------------+
+| Time of Transition | PID | Old State   | New State  | REM CPU BURST |
++--------------------+-----+-------------+------------+---------------+
+| 0                  | 15  | NEW         | READY       | 25          |
+| 0                  | 12  | NEW         | READY       | 50          |
+| 0                  | 1   | NEW         | READY       | 100         |
+| 0                  | 15  | READY       | RUNNING     | 25          |
+| 5                  | 2   | NEW         | READY       | 20          |
+| 11                 | 15  | RUNNING     | WAITING     | 14          |
+| 11                 | 12  | READY       | RUNNING     | 50          |
+| 14                 | 15  | WAITING     | READY       | 14          |
+| 14                 | 3   | NEW         | READY       | 5           |
+| 21                 | 12  | RUNNING     | WAITING     | 40          |
+| 21                 | 1   | READY       | RUNNING     | 100         |
+| 26                 | 12  | WAITING     | READY       | 40          |
+| 46                 | 1   | RUNNING     | WAITING     | 75          |
+| 46                 | 2   | READY       | RUNNING     | 20          |
+| 56                 | 2   | RUNNING     | WAITING     | 10          |
+| 56                 | 15  | READY       | RUNNING     | 14          |
+| 58                 | 2   | WAITING     | READY       | 10          |
+| 67                 | 15  | RUNNING     | WAITING     | 3           |
+| 67                 | 3   | READY       | RUNNING     | 5           |
+| 69                 | 3   | RUNNING     | WAITING     | 3           |
+| 69                 | 12  | READY       | RUNNING     | 40          |
+| 70                 | 15  | WAITING     | READY       | 3           |
+| 71                 | 1   | WAITING     | READY       | 75          |
+| 79                 | 12  | RUNNING     | WAITING     | 30          |
+| 79                 | 3   | WAITING     | READY       | 3           |
+| 79                 | 2   | READY       | RUNNING     | 10          |
+| 80                 | 2   | RUNNING     | TERMINATED  | 0           |
+| 81                 | 2   | RUNNING     | TERMINATED  | 0           |
+| 82                 | 2   | RUNNING     | TERMINATED  | 0           |
+| 83                 | 2   | RUNNING     | TERMINATED  | 0           |
+| 84                 | 12  | WAITING     | READY       | 30          |
+| 84                 | 2   | RUNNING     | TERMINATED  | 0           |
