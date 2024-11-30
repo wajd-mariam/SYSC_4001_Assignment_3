@@ -24,6 +24,8 @@ typedef struct {
     unsigned int arrival_time;
     unsigned int total_burst_time;
     unsigned int remaining_burst_time;
+    unsigned int process_execution_end_time;
+    bool process_last_cpu_burst;
     unsigned int io_frequency;
     unsigned int io_duration;
     unsigned int next_io_event; // Time when next i/o event will occur
