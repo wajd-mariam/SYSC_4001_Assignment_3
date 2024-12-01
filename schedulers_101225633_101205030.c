@@ -25,7 +25,7 @@ bool process_currently_running = false; // initially no processes are running in
 
 // Files:
 FILE *execution_output_file;
-FILE *memory_output_file;
+FILE *memory_status_output_file;
 FILE *vector_table_txt_file;
 
 
@@ -34,6 +34,10 @@ static unsigned int current_time = 0;
 static unsigned int process_counter = 0;
 static unsigned int ready_queue_size = 0;
 static unsigned int completed_processes = 0;
+static unsigned int total_available_memory = 0;
+static unsigned int memory_used = 0;
+static unsigned int total_free_memory = 100;
+static unsigned int usable_free_memory = 0;
 static int pcb_counter = 0;
 static int save_time = 0;
 
@@ -95,9 +99,16 @@ void read_input_data_file(const char *filename) {
         }
         line_number++;
     }
-    print_pcb_entries();
+    //print_pcb_entries();
     printf("Finishing reading file\n");
-    fcfs_simulator();
+
+    if (strcmp(scheduler_mode, "fcfs")== 0) {
+        printf("SIMULATION FCFS\n");
+        fcfs_simulator();
+    } else if (strcmp(scheduler_mode, "sjf") == 0) {
+        //sjf_simulator();
+    }
+    
 
     fclose(input_data_file);
 }
@@ -137,6 +148,14 @@ void print_ready_queue_entries(void) {
     }
 }
 
+void print_memory_partitons(void) {
+    for(int i = 0; i < NUM_PARTITIONS; i++) {
+        printf("\nPARTITION NUMBER: %d\n", memory_partitions[i].partition_number);
+        printf("PARTITION SIZE: %d\n", memory_partitions[i].size);
+        printf("PARTITION STATUS: %d\n\n", memory_partitions[i].status);
+    }
+}
+
 
 void fcfs_simulator() {
     while (completed_processes < process_counter)  {
@@ -170,7 +189,7 @@ void fcfs_simulator() {
                     } else { // There is a process running in the CPU -> Enqueue to ready queue only:
                         enqueue_ready_queue(current_process);
                     }
-                    log_transition(current_time, current_process, "NEW", "READY");
+                    log_execution_transition(current_time, current_process, "NEW", "READY");
     	    	}
     	    	// Process was not allocated memory:
     	    	else {
@@ -181,20 +200,20 @@ void fcfs_simulator() {
     	    } else if ((strcmp(current_process->process_status, "RUNNING") == 0) && current_process->next_io_event == current_time && !current_process->process_last_cpu_burst) {
                 process_currently_running = false;
                 strcpy(current_process->process_status, "WAITING");
-                log_transition(current_time, current_process, "RUNNING", "WAITING");             
+                log_execution_transition(current_time, current_process, "RUNNING", "WAITING");             
             } 
             // Enqueing process after it finished waiting for I/O:
             else if ((strcmp(current_process->process_status, "WAITING") == 0) && current_process->io_event_finished == current_time) {
                 if (!(current_process->process_last_cpu_burst)) {
                     printf("\nPROCESS FINISHED I/O!!!!!!!!!!!!!!!!!!!!!!!!!1\n");
-                    log_transition(current_time, current_process, "WAITING", "READY");
+                    log_execution_transition(current_time, current_process, "WAITING", "READY");
                     enqueue_ready_queue(current_process);
                 }
             }
             else if ((strcmp(current_process->process_status, "RUNNING") == 0) && current_time == current_process->process_execution_end_time) {
                 if (current_process->process_last_cpu_burst) {
                     printf("\nPROCESS HAS TERMINIATED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-                    log_transition(current_time, current_process, "RUNNING", "TERMINATED");
+                    log_execution_transition(current_time, current_process, "RUNNING", "TERMINATED");
                     strcpy(current_process->process_status, "TERMINATED");
                     process_currently_running = false;
                     completed_processes++;
@@ -259,7 +278,7 @@ bool allocate_partition(unsigned int process_index) {
     int memory_required = pcb_fcfs_entries[process_index].memory_size;
     int pid = pcb_fcfs_entries[process_index].pid;
 	printf("Memory Required-------------:%d\n", memory_required);
-    // Find the best-fit partition - starting from smallest to largest partition:
+    // Find the best-fit partition - starting from smallest to largest partition (best-fit):
     for (int i = NUM_PARTITIONS - 1; i >= 0; i--) {
         if(memory_partitions[i].size >= memory_required &&
             memory_partitions[i].status == -1) {
@@ -267,6 +286,11 @@ bool allocate_partition(unsigned int process_index) {
 			memory_partitions[i].status = pid; // Updating partitions' status with PID
 			pcb_fcfs_entries[process_index].allocated_partition_number = i+1;
 			memory_partitions[i].status == pcb_fcfs_entries[process_index].pid;
+
+            memory_used += memory_required;
+            total_free_memory -= memory_required;
+            usable_free_memory -= memory_partitions[i].size;
+            //log_memory_status_transition(current_time, memory_used, usable_free_memory);
 			return true;
         }
     }
@@ -285,7 +309,7 @@ void schedule_fcfs_ready_queue() {
         // Modify currently_running_process status to "RUNNING":
         strcpy(currently_running_process->process_status, "RUNNING");
         // Log transition change:
-        log_transition(current_time, currently_running_process,"READY", "RUNNING");
+        log_execution_transition(current_time, currently_running_process,"READY", "RUNNING");
 
         process_currently_running = true;
 
@@ -324,7 +348,20 @@ void log_execution_header() {
 }
 
 
-void log_transition(int time, Process *process, const char *old_state, const char *new_state) {
+void log_memory_status_header() {
+    if (memory_status_output_file == NULL) {
+        fprintf(stderr, "Error: Memory Status file is not open.\n");
+        return;
+    }
+
+    fprintf(memory_status_output_file,
+            "+---------------+-------------+-----------------+-------------------+--------------------+\n"
+            "| Time of Event | Memory Used | Partition State | Total Free Memory | Usable Free Memory | \n"
+            "+---------------+-------------+-----------------+-------------------+--------------------+\n");
+}
+
+
+void log_execution_transition(int time, Process *process, const char *old_state, const char *new_state) {
     if (execution_output_file == NULL) {
         fprintf(stderr, "Error: Log file is not open.\n");
         return;
@@ -339,6 +376,16 @@ void log_transition(int time, Process *process, const char *old_state, const cha
     fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s | %-11d | %-11d | \n", time, process->pid, old_state, new_state, process->remaining_burst_time, process->process_execution_end_time);
 }
 
+
+/**void log_memory_status_transition(int current_time, int memory_used, int usable_free_memory) {
+    if (execution_output_file == NULL) {
+        fprintf(stderr, "Error: Log file is not open.\n");
+        return;
+    }
+
+    // Print to log file
+    fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s | %-11d | %-11d | \n", time, process->pid, old_state, new_state, process->remaining_burst_time, process->process_execution_end_time);
+}*/
 
 
 int main(int argc, char *argv[]) {
@@ -360,23 +407,33 @@ int main(int argc, char *argv[]) {
         printf("Error opening %s\n", argv[2]);
         return 1;
     }
+
+    // Use the third argument as the memory_status.txt file
+    memory_status_output_file = fopen(argv[3], "w");
+    if (memory_status_output_file == NULL) {
+        printf("Error opening %s\n", argv[3]);
+        return 1;
+    }
+
+    // Taking argument 4 as input for selecting scheduler type
+    // Two valid options fcfs (first come first served) & sjf (shortest job first)
+    strcpy(scheduler_mode, argv[4]);
+
     // Printing log header in "execution_output_file.txt"
     log_execution_header();
 
     // Printing log header in "memory_status.txt"
-    //log_
-    read_input_data_file(argv[1]);
-    
+    log_memory_status_header();
 
-    // Use the third argument as the memory_status.txt file
-    /**memory_output_file = fopen(argv[3], "w");
-    if (memory_output_file == NULL) {
-        printf("Error opening %s\n", argv[3]);
-        return 1;
-    }*/
+    // Read input data file:
+    read_input_data_file(argv[1]);
+
+
+    printf("\n\nMEMORY PARTITIONS\n");
+    print_memory_partitons();
 
     // Use the fourth argument as the scheduler used
-    //scheduler_mode = argv[4];
+    
 
     // Close the log file
     fclose(execution_output_file);

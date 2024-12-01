@@ -10,6 +10,7 @@
 #define MAX_READY_QUEUE_ENTRIES 100
 #define MAX_PCB_ENTRIES 20
 #define NUM_PARTITIONS 6
+#define TOTAL_MEMORY_AVAILABLE 100
 
 // Declare global variables
 extern FILE *log_file;
@@ -55,6 +56,7 @@ Process* dequeue_ready_queue(void);
 bool allocate_partition(unsigned int process_index);
 void schedule_fcfs_ready_queue(void);
 void log_header(void);
-void log_transition(int time, Process *process, const char *old_state, const char *new_state);
+void log_execution_transition(int time, Process *process, const char *old_state, const char *new_state);
+void log_memory_status_transition(current_time, memory_used, usable_free_memory);
 
 #endif  // SCHEDULERS_101225633_101205030_H
