@@ -111,7 +111,7 @@ void read_input_data_file(const char *filename) {
 	    printf("Starting SJF Scheduling...\n");
         sjf_simulator();
     } else {
-        printf("INVALID SCHEDULER TYPE; CHOOSE EITHER FCFS OR EP");
+        printf("INVALID SCHEDULER TYPE; CHOOSE EITHER FCFS OR EP\n");
     }
 
     fclose(input_data_file);
