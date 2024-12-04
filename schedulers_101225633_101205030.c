@@ -106,7 +106,7 @@ void read_input_data_file(const char *filename) {
         printf("SIMULATION FCFS\n");
         fcfs_simulator();
     } else if (strcmp(scheduler_mode, "sjf") == 0) {
-        //sjf_simulator();
+        sjf_simulator();
     }
     
 
@@ -233,6 +233,85 @@ void fcfs_simulator() {
 }
 
 
+void sjf_simulator() {
+    while (completed_processes < process_counter)  {
+        printf("COMPLETED PROCESSES COUNTER VALUE AT FCFS SIM: %d\n", completed_processes);
+        printf("CURRENT TIME VALUE AT FCFS SIM: %d\n", current_time);
+
+    	for (int i = 0; i < process_counter; i++) {
+            Process *current_process = &pcb_fcfs_entries[i];
+            
+            printf("GOING IN FOR LOOP---------------------\n");
+            printf("PROCESS PID: %d\n", current_process->pid);
+            printf("Process arrival time:%d\n", current_process->arrival_time);
+            printf("PROCESS BACK FROM WAITING FROM I/O at: %d\n", current_process->io_event_finished);
+            printf("CURRENT PROCESS STATUS: %s\n", current_process->process_status);
+            printf("PROCESS REM CPU BURST: %d\n", current_process->remaining_burst_time);
+            printf("CURRENT TIME VALUE INSIDE LOOP ################################################# %d\n", current_time);
+
+            // Checking arrival times for each process in ready queue:
+    	    if ((current_process->arrival_time <= current_time) && strcmp(current_process->process_status, "NEW") == 0) {
+                printf("\nADDING A NEW PROCESS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	        	// Allocate memory partition for process:
+    	    	bool partition_allocated = allocate_partition(i);
+
+    	    	// If a memory partition was successfully allocated:
+    	    	if (partition_allocated) {
+                    // No processs are being executed by CPU -> Enqueue to ready queue and call scheduler: 
+                    if (!process_currently_running) {
+                        enqueue_ready_queue(current_process); // Enqueue current process
+                        // Mark process status as "READY":
+                        strcpy(current_process->process_status, "READY");
+                    } else { // There is a process running in the CPU -> Enqueue to ready queue only:
+                        enqueue_ready_queue(current_process);
+                    }
+                    log_execution_transition(current_time, current_process, "NEW", "READY");
+    	    	}
+    	    	// Process was not allocated memory:
+    	    	else {
+    	    		// Process' status will stay marked as "NEW" until a memory partition is available to store the process in it:
+    	    		printf("Time %d: Could not allocate memory for process %d.\n", current_time, pcb_fcfs_entries[i].pid);
+    	    	}
+            // Currently running process needs an I/O:
+    	    } else if ((strcmp(current_process->process_status, "RUNNING") == 0) && current_process->next_io_event == current_time && !current_process->process_last_cpu_burst) {
+                process_currently_running = false;
+                strcpy(current_process->process_status, "WAITING");
+                log_execution_transition(current_time, current_process, "RUNNING", "WAITING");             
+            } 
+            // Enqueing process after it finished waiting for I/O:
+            else if ((strcmp(current_process->process_status, "WAITING") == 0) && current_process->io_event_finished == current_time) {
+                if (!(current_process->process_last_cpu_burst)) {
+                    printf("\nPROCESS FINISHED I/O!!!!!!!!!!!!!!!!!!!!!!!!!1\n");
+                    log_execution_transition(current_time, current_process, "WAITING", "READY");
+                    enqueue_ready_queue(current_process);
+                }
+            }
+
+            // Process is currently running in its last CPU burst (it does not need i/o) -> it will finish executing and terminates:
+            else if ((strcmp(current_process->process_status, "RUNNING") == 0) && current_time == current_process->process_execution_end_time) {
+                if (current_process->process_last_cpu_burst) {
+                    printf("\nPROCESS HAS TERMINIATED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+                    log_execution_transition(current_time, current_process, "RUNNING", "TERMINATED");
+                    strcpy(current_process->process_status, "TERMINATED");
+                    // Freeing up memory partition after process is terminated:
+                    free_memory_partition(current_process);
+                    process_currently_running = false;
+                    completed_processes++;
+                }
+            }
+        }
+
+        if (!process_currently_running && ready_queue_size > 0) {
+            schedule_sjf_ready_queue();
+        }
+        
+        current_time++;
+        // Ensure completed_processes is updated:
+        printf("Completed processes: %d\n", completed_processes);
+    }
+}
+
+
 void enqueue_ready_queue(Process *process_to_enqueue) {
     printf("READY QUEUE SIZE: %d\n", ready_queue_size); 
     if (ready_queue_size >= MAX_READY_QUEUE_ENTRIES) {
@@ -248,6 +327,7 @@ void enqueue_ready_queue(Process *process_to_enqueue) {
 }
 
 
+// Removes the first element in "ready_queue":
 Process* dequeue_ready_queue(void) {
     printf("ready_queue_size before dequeuing: %d\n", ready_queue_size);
 	if (ready_queue_size <= 0) {
@@ -270,6 +350,42 @@ Process* dequeue_ready_queue(void) {
 	print_ready_queue_entries();
 
 	return dequeued_process; 
+}
+
+
+// Removes a specific element in "ready_queue":
+void dequeue_specific_element_ready_queue(Process* process_to_dequeue) {
+    if (ready_queue_size <= 0) {
+		printf("Ready queue is empty. Cannot dequeue.\n");
+		return NULL;
+	}
+
+    // Find the position of the process in the "ready_queue":
+    int process_position = -1;
+    for (int i = 0; i < ready_queue_size; i++) {
+        if(ready_queue[i] == process_to_dequeue) {
+            process_position = i;
+            break;
+        }
+    }
+
+    
+    // Checking if process was not found in "ready_queue":
+    if (process_position == -1) {
+        printf("Process was not found in ready_queue. Cannot dequeue.");
+        return;
+    }
+
+    
+    // If process was found successfully -> need to shift up all processes after it in ready_queue
+    for (int i = process_position + 1; i <ready_queue_size; i++ ){
+        ready_queue[i - 1] = ready_queue[i];
+    }
+
+    // Decrement ready_queue size after dequeuing an element:
+    ready_queue_size--;
+
+    print_ready_queue_entries();
 }
 
 
@@ -296,6 +412,17 @@ bool allocate_partition(unsigned int process_index) {
     }
     // No sutiable partition found -> return false
     return false;
+}
+
+
+void free_memory_partition(Process* process_to_free) {
+    if (process_to_free->allocated_partition_number == -1) {
+        printf("Process %d does not have a memory parition allocated.\n", process_to_free->pid);
+        return;
+    }
+
+    
+
 }
 
 
@@ -330,8 +457,83 @@ void schedule_fcfs_ready_queue() {
     } else {
         printf("INVALID PROCESS-EXITING\n");
     }
-    //completed_processes++;
+}
+
+
+void schedule_sjf_ready_queue() {
+
+	printf("Starting SJF Scheduling...\n");
     
+    // Looking at current ready queue and finding shortest job first:
+    Process* shortest_job = find_shortest_job();
+    printf("\n\nSHORTEST JOB+++++++++++++++++++++++++++++\n");
+    printf("PID: %d\n", shortest_job->pid);
+	printf("memory size: %d\n", shortest_job->memory_size);
+	printf("arrival time: %d\n", shortest_job->arrival_time);
+	printf("total_cpu_time: %d\n", shortest_job->total_burst_time);
+	printf("io frequency: %d\n", shortest_job->io_frequency);
+	printf("io duration: %d\n", shortest_job->io_duration);
+	printf("process' status: %s\n", shortest_job->process_status);
+	printf("Partition Allocated: %d\n", shortest_job->allocated_partition_number);
+	printf("\n");
+
+    printf("READY QUEUE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+    print_ready_queue_entries();
+    dequeue_specific_element_ready_queue(shortest_job);
+    printf("READY QUEUE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+    print_ready_queue_entries();
+
+    completed_processes++;
+	/**Process *currently_running_process = dequeue_ready_queue();
+
+    // Process is valid; perform operations:
+    if (currently_running_process->pid != -1) {
+        // Modify currently_running_process status to "RUNNING":
+        strcpy(currently_running_process->process_status, "RUNNING");
+        // Log transition change:
+        log_execution_transition(current_time, currently_running_process,"READY", "RUNNING");
+
+        process_currently_running = true;
+
+        if (currently_running_process->remaining_burst_time <= currently_running_process->io_frequency) {
+            currently_running_process->process_execution_end_time = currently_running_process->remaining_burst_time + current_time;
+            currently_running_process->process_last_cpu_burst = true;
+        }
+
+        // Update process's struct variables:
+        currently_running_process->next_io_event = current_time + currently_running_process->io_frequency;
+        currently_running_process->io_event_finished = currently_running_process->next_io_event + currently_running_process->io_duration;
+        currently_running_process->remaining_burst_time = currently_running_process->remaining_burst_time - currently_running_process->io_frequency;
+        printf("PROCESS ID is: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++\n", currently_running_process->pid);
+        printf("Currently running process next_io_event: %d\n", currently_running_process->next_io_event);
+        printf("Currently running process finishes waiting for I/O at : %d\n", currently_running_process->io_event_finished);
+        printf("Currently running process remaining CPU burst time : %d\n", currently_running_process->remaining_burst_time);
+
+    } else {
+        printf("INVALID PROCESS-EXITING\n");
+    }*/
+}
+
+
+Process* find_shortest_job() {
+
+    // Assuming shortest job is the first element in the ready queue
+    Process* shortest_job = ready_queue[0];
+
+    for (int i = 1; i < ready_queue_size; i++) {
+        if(ready_queue[i]->remaining_burst_time < shortest_job->remaining_burst_time) {
+            shortest_job = ready_queue[i];
+        }
+
+        // If remaining bursts are equal -> select the Process with the lower PID:
+        else if (ready_queue[i]->remaining_burst_time == shortest_job->remaining_burst_time) {
+            if (ready_queue[i]->pid < shortest_job->pid) {
+                shortest_job = ready_queue[i];
+            }
+        }
+    }
+    
+    return shortest_job;
 }
 
 
@@ -429,8 +631,8 @@ int main(int argc, char *argv[]) {
     read_input_data_file(argv[1]);
 
 
-    printf("\n\nMEMORY PARTITIONS\n");
-    print_memory_partitons();
+    //printf("\n\nMEMORY PARTITIONS\n");
+    //print_memory_partitons();
 
     // Use the fourth argument as the scheduler used
     
