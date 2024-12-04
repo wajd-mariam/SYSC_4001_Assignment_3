@@ -257,7 +257,6 @@ void enqueue_ready_queue(Process *process_to_enqueue) {
 
 // Removes the first element in "ready_queue":
 Process* dequeue_ready_queue(void) {
-    printf("ready_queue_size before dequeuing: %d\n", ready_queue_size);
 	if (ready_queue_size <= 0) {
 		printf("Ready queue is empty. Cannot dequeue.\n");
 		return NULL;
