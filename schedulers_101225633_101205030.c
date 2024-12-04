@@ -37,7 +37,7 @@ static unsigned int completed_processes = 0;
 static unsigned int total_available_memory = 0;
 static unsigned int memory_used = 0;
 static unsigned int total_free_memory = 100;
-static unsigned int usable_free_memory = 0;
+static unsigned int usable_free_memory = 100;
 static int pcb_counter = 0;
 static int save_time = 0;
 
@@ -50,6 +50,9 @@ MemoryPartition memory_partitions[NUM_PARTITIONS] = {
     {5, 8, -1},
     {6, 2, -1}
 };
+
+// Defining "partitions_state" array of integers (used in "log_memory_status_transition"):
+int partitions_state[6] = {-1, -1, -1, -1, -1, -1};
 
 
 // Reading "input_data.txt" file and storing valid data in PCB:
@@ -77,7 +80,7 @@ void read_input_data_file(const char *filename) {
         if (sscanf(line, "%d, %d, %d, %d, %d, %d", &pid, &memory_size, &arrival_time, &total_burst_time, &io_frequency, &io_duration) == 6) {
             // Validate that none of the values is less than 0:
             if (pid >= 0 && memory_size >= 0 && arrival_time >= 0 && total_burst_time >= 0 && io_frequency >= 0 && io_duration >= 0) {
-                
+
                 // Storing valid process' data in PCB:
                 pcb_fcfs_entries[process_counter].pid = pid;
                 pcb_fcfs_entries[process_counter].memory_size = memory_size;
@@ -108,7 +111,6 @@ void read_input_data_file(const char *filename) {
     } else if (strcmp(scheduler_mode, "sjf") == 0) {
         sjf_simulator();
     }
-    
 
     fclose(input_data_file);
 }
@@ -407,7 +409,7 @@ bool allocate_partition(unsigned int process_index) {
             memory_used += memory_required;
             total_free_memory -= memory_required;
             usable_free_memory -= memory_partitions[i].size;
-            //log_memory_status_transition(current_time, memory_used, usable_free_memory);
+            log_memory_status_transition(current_time, memory_used, usable_free_memory, i, memory_partitions[i].status);
 			return true;
         }
     }
@@ -584,15 +586,33 @@ void log_execution_transition(int time, Process *process, const char *old_state,
 }
 
 
-/**void log_memory_status_transition(int current_time, int memory_used, int usable_free_memory) {
+void log_memory_status_transition(int current_time, int memory_used, int usable_free_memory, int partition_number, int process_pid) {
+
+    char partition_state_string_array[100];
+
     if (execution_output_file == NULL) {
         fprintf(stderr, "Error: Log file is not open.\n");
         return;
     }
 
+    // Modifying "partitions_state" array of integers to reflect latest changes:
+    partitions_state[partition_number] = process_pid;
+
+    // looping through "partition_state array" of integers and appending elements to "partition_state_string_array":
+    for (int i = 0; i < 6; i++ ){
+        char temp[10];
+        sprintf(temp, "%d", partitions_state[i]);
+        strcat(partition_state_string_array, temp);
+
+        if (i < 5) {
+            strcat(partition_state_string_array, ", ");
+        }
+    }
+
     // Print to log file
-    fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s | %-11d | %-11d | \n", time, process->pid, old_state, new_state, process->remaining_burst_time, process->process_execution_end_time);
-}*/
+    //fprintf(memory_status_output_file, "| %-18d | %-10d | %-20s | %-11d | %-11d | \n", current_time, memory_used, partition_state_string_array, total_free_memory, usable_free_memory);
+    fprintf(memory_status_output_file, "| %-13d | %-11d | %-20s |\n", current_time, memory_used, partition_state_string_array);
+}
 
 
 int main(int argc, char *argv[]) {
@@ -644,6 +664,7 @@ int main(int argc, char *argv[]) {
 
     // Close the log file
     fclose(execution_output_file);
+    fclose(memory_status_output_file);
     //fclose(memory_output_file);
     printf("Simulation complete. Check execution files for details.\n");
 
