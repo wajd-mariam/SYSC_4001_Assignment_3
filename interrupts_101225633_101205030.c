@@ -104,12 +104,14 @@ void read_input_data_file(const char *filename) {
     }
     printf("Finishing reading file\n");
 
-    if (strcmp(scheduler_mode, "fcfs")== 0) {
+    if (strcmp(scheduler_mode, "FCFS")== 0) {
         printf("Starting FCFS Scheduling...\n");
         fcfs_simulator();
-    } else if (strcmp(scheduler_mode, "sjf") == 0) {
+    } else if (strcmp(scheduler_mode, "EP") == 0) {
 	    printf("Starting SJF Scheduling...\n");
         sjf_simulator();
+    } else {
+        printf("INVALID SCHEDULER TYPE; CHOOSE EITHER FCFS OR EP");
     }
 
     fclose(input_data_file);
@@ -520,30 +522,26 @@ int main(int argc, char *argv[]) {
 
     // READING FILES
     // Reading arguments from "test#.sh" file
-    if (argc < 2) {
-        printf("Usage: %s <inputDataFile> <executionOutputFile>\n", argv[0]);
+    if (argc != 3) {
+        printf("Usage: %s <input_file> <scheduler_type>\n", argv[0]);
+        printf("Scheduler types: fcfs, sjf\n");
         return 1;
     }
-
-    // Use the first argument as the input_data.txt file
     
     // Use the second argument as the execution.txt file
-    execution_output_file = fopen(argv[2], "w");
+    execution_output_file = fopen("execution_101225633_101205030.txt", "w");
     if (execution_output_file == NULL) {
-        printf("Error opening %s\n", argv[2]);
         return 1;
     }
 
-    // Use the third argument as the memory_status.txt file
-    memory_status_output_file = fopen(argv[3], "w");
+    memory_status_output_file = fopen("memory_status_101225633_101205030.txt", "w");
     if (memory_status_output_file == NULL) {
-        printf("Error opening %s\n", argv[3]);
         return 1;
     }
 
     // Taking argument 4 as input for selecting scheduler type
     // Two valid options fcfs (first come first served) & sjf (shortest job first)
-    strcpy(scheduler_mode, argv[4]);
+    strcpy(scheduler_mode, argv[2]);
 
     // Printing log header in "execution_output_file.txt"
     log_execution_header();
@@ -551,7 +549,7 @@ int main(int argc, char *argv[]) {
     // Printing log header in "memory_status.txt"
     log_memory_status_header();
 
-    // Read input data file:
+    // Use the first argument as the input_data_#.txt file and passing it as parameter to "read_input_data_file" method:
     read_input_data_file(argv[1]);    
 
     // Close the log file
