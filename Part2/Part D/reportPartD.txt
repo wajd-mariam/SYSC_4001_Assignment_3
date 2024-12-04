@@ -1,0 +1,4 @@
+Part D
+For Part A and B, both programs work as intended. They fetch a student and lock their own semaphore and the next TA's semaphore, while fetching. If they can't lock both, they end up releasing both semaphores and letting another TA pick. This cycle keeps going until all TAs have checked the database 3 times. 
+
+For Part C, the issue of livelock occurs as each TA tries to lock 2 semaphores but cant, so they end up in a loop locking trying to lock 2. For example, TA 1 gets semaphore 1 but cannot acquire semaphore 2, so it releases semaphore 1. Simultaneously, TA 2 acquires semaphore 2 but cannot acquire semaphore 3, so it releases semaphore 2. This cycle could continue indefinitely, with processes constantly releasing and retrying semaphore acquisition without completing their tasks.
