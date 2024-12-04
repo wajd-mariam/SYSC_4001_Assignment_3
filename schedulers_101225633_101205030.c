@@ -409,7 +409,7 @@ bool allocate_partition(unsigned int process_index) {
             memory_used += memory_required;
             total_free_memory -= memory_required;
             usable_free_memory -= memory_partitions[i].size;
-            log_memory_status_transition(current_time, memory_used, usable_free_memory, i, memory_partitions[i].status);
+            log_memory_status_transition(current_time, memory_used, usable_free_memory, i, memory_partitions[i].status, true);
 			return true;
         }
     }
@@ -429,6 +429,14 @@ void free_memory_partition(Process* process_to_free) {
 
     // Update memory partition status as available (-1):
     memory_partitions[partition_index].status = -1;
+
+    // 
+    memory_used -= process_to_free->memory_size;
+    total_free_memory += process_to_free->memory_size;
+    usable_free_memory += memory_partitions[partition_index].size;
+
+    log_memory_status_transition(current_time, memory_used, usable_free_memory, partition_index, memory_partitions[partition_index].status, false);
+    
     printf("Memory partition %d has been freed.\n", memory_partitions[partition_index].partition_number);
 
 }
@@ -564,9 +572,10 @@ void log_memory_status_header() {
     }
 
     fprintf(memory_status_output_file,
-            "+---------------+-------------+-----------------+-------------------+--------------------+\n"
-            "| Time of Event | Memory Used | Partition State | Total Free Memory | Usable Free Memory | \n"
-            "+---------------+-------------+-----------------+-------------------+--------------------+\n");
+            "+---------------+-------------+--------------------------+-------------------+--------------------+\n"
+            "| Time of Event | Memory Used | Partition State          | Total Free Memory | Usable Free Memory | \n"
+            "+---------------+-------------+--------------------------+-------------------+--------------------+\n"
+            "| 0             | 0           | -1, -1, -1, -1, -1 ,-1   | 100               | 100                |\n");
 }
 
 
@@ -586,17 +595,21 @@ void log_execution_transition(int time, Process *process, const char *old_state,
 }
 
 
-void log_memory_status_transition(int current_time, int memory_used, int usable_free_memory, int partition_number, int process_pid) {
+void log_memory_status_transition(int current_time, int memory_used, int usable_free_memory, int partition_number, int process_pid, bool allocate_new_process) {
 
-    char partition_state_string_array[100];
+    char partition_state_string_array[100] = "";
 
     if (execution_output_file == NULL) {
         fprintf(stderr, "Error: Log file is not open.\n");
         return;
     }
 
-    // Modifying "partitions_state" array of integers to reflect latest changes:
-    partitions_state[partition_number] = process_pid;
+    if (allocate_new_process) {
+        // Modifying "partitions_state" array of integers to reflect latest changes:
+        partitions_state[partition_number] = process_pid;
+    } else {
+        partitions_state[partition_number] = -1;
+    }
 
     // looping through "partition_state array" of integers and appending elements to "partition_state_string_array":
     for (int i = 0; i < 6; i++ ){
@@ -610,8 +623,7 @@ void log_memory_status_transition(int current_time, int memory_used, int usable_
     }
 
     // Print to log file
-    //fprintf(memory_status_output_file, "| %-18d | %-10d | %-20s | %-11d | %-11d | \n", current_time, memory_used, partition_state_string_array, total_free_memory, usable_free_memory);
-    fprintf(memory_status_output_file, "| %-13d | %-11d | %-20s |\n", current_time, memory_used, partition_state_string_array);
+    fprintf(memory_status_output_file, "| %-13d | %-11d | %-24s | %-17d | %-18d | \n", current_time, memory_used, partition_state_string_array, total_free_memory, usable_free_memory);
 }
 
 
