@@ -1,8 +1,8 @@
-// schedulers_101225633_101205030_H.h
+// interrupts_101225633_101205030_H
 #include <stdio.h>
 #include <stdbool.h>
-#ifndef SCHEDULERS_101225633_101205030_H
-#define SCHEDULERS_101225633_101205030_H
+#ifndef INTERRUPTS_101225633_101205030_H
+#define INTERRUPTS_101225633_101205030_H
 
 // Define macros
 #define MAX_EVENTS 1000
@@ -63,4 +63,4 @@ Process* find_shortest_job(void);
 void log_header(void);
 void log_execution_transition(int time, Process *process, const char *old_state, const char *new_state);
 void log_memory_status_transition(int current_time, int memory_used, int usable_free_memory, int partition_number, int process_pid, bool allocate_new_process);
-#endif  // SCHEDULERS_101225633_101205030_H
+#endif  // INTERRUPTS_101225633_101205030_H
