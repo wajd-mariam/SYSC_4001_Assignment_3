@@ -215,6 +215,7 @@ void fcfs_simulator() {
                     printf("\nPROCESS HAS TERMINIATED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                     log_execution_transition(current_time, current_process, "RUNNING", "TERMINATED");
                     strcpy(current_process->process_status, "TERMINATED");
+                    free_memory_partition(current_process);
                     process_currently_running = false;
                     completed_processes++;
                 }
@@ -357,7 +358,7 @@ Process* dequeue_ready_queue(void) {
 void dequeue_specific_element_ready_queue(Process* process_to_dequeue) {
     if (ready_queue_size <= 0) {
 		printf("Ready queue is empty. Cannot dequeue.\n");
-		return NULL;
+		return;
 	}
 
     // Find the position of the process in the "ready_queue":
@@ -421,7 +422,12 @@ void free_memory_partition(Process* process_to_free) {
         return;
     }
 
-    
+    // Get the partition index (partiton number - 1 because arrays are 0-indexed):
+    int partition_index = process_to_free->allocated_partition_number - 1;
+
+    // Update memory partition status as available (-1):
+    memory_partitions[partition_index].status = -1;
+    printf("Memory partition %d has been freed.\n", memory_partitions[partition_index].partition_number);
 
 }
 
@@ -483,35 +489,34 @@ void schedule_sjf_ready_queue() {
     printf("READY QUEUE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
     print_ready_queue_entries();
 
-    completed_processes++;
-	/**Process *currently_running_process = dequeue_ready_queue();
+    //completed_processes++;
 
     // Process is valid; perform operations:
-    if (currently_running_process->pid != -1) {
+    if (shortest_job->pid != -1) {
         // Modify currently_running_process status to "RUNNING":
-        strcpy(currently_running_process->process_status, "RUNNING");
+        strcpy(shortest_job->process_status, "RUNNING");
         // Log transition change:
-        log_execution_transition(current_time, currently_running_process,"READY", "RUNNING");
+        log_execution_transition(current_time, shortest_job,"READY", "RUNNING");
 
         process_currently_running = true;
 
-        if (currently_running_process->remaining_burst_time <= currently_running_process->io_frequency) {
-            currently_running_process->process_execution_end_time = currently_running_process->remaining_burst_time + current_time;
-            currently_running_process->process_last_cpu_burst = true;
+        if (shortest_job->remaining_burst_time <= shortest_job->io_frequency) {
+            shortest_job->process_execution_end_time = shortest_job->remaining_burst_time + current_time;
+            shortest_job->process_last_cpu_burst = true;
         }
 
         // Update process's struct variables:
-        currently_running_process->next_io_event = current_time + currently_running_process->io_frequency;
-        currently_running_process->io_event_finished = currently_running_process->next_io_event + currently_running_process->io_duration;
-        currently_running_process->remaining_burst_time = currently_running_process->remaining_burst_time - currently_running_process->io_frequency;
-        printf("PROCESS ID is: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++\n", currently_running_process->pid);
-        printf("Currently running process next_io_event: %d\n", currently_running_process->next_io_event);
-        printf("Currently running process finishes waiting for I/O at : %d\n", currently_running_process->io_event_finished);
-        printf("Currently running process remaining CPU burst time : %d\n", currently_running_process->remaining_burst_time);
+        shortest_job->next_io_event = current_time + shortest_job->io_frequency;
+        shortest_job->io_event_finished = shortest_job->next_io_event + shortest_job->io_duration;
+        shortest_job->remaining_burst_time = shortest_job->remaining_burst_time - shortest_job->io_frequency;
+        printf("PROCESS ID is: %d+++++++++++++++++++++++++++++++++++++++++++++++++++++\n", shortest_job->pid);
+        printf("Currently running process next_io_event: %d\n", shortest_job->next_io_event);
+        printf("Currently running process finishes waiting for I/O at : %d\n", shortest_job->io_event_finished);
+        printf("Currently running process remaining CPU burst time : %d\n", shortest_job->remaining_burst_time);
 
     } else {
         printf("INVALID PROCESS-EXITING\n");
-    }*/
+    }
 }
 
 
@@ -631,8 +636,8 @@ int main(int argc, char *argv[]) {
     read_input_data_file(argv[1]);
 
 
-    //printf("\n\nMEMORY PARTITIONS\n");
-    //print_memory_partitons();
+    printf("\n\nMEMORY PARTITIONS\n");
+    print_memory_partitons();
 
     // Use the fourth argument as the scheduler used
     

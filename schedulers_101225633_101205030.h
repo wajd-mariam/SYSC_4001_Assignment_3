@@ -56,7 +56,7 @@ void enqueue_ready_queue(Process *process_to_enqueue);
 Process* dequeue_ready_queue(void);
 void dequeue_specific_element_ready_queue(Process* process_to_dequeue);
 bool allocate_partition(unsigned int process_index);
-void free_memory_partition(unsigned int process_pid);
+void free_memory_partition(Process* process_to_free);
 void schedule_fcfs_ready_queue(void);
 void schedule_sjf_ready_queue(void);
 Process* find_shortest_job(void);
