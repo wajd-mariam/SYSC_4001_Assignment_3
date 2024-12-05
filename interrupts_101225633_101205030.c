@@ -447,9 +447,9 @@ void log_execution_header() {
     }
 
     fprintf(execution_output_file,
-            "+--------------------+-----+-------------+------------+---------------+--------------\n"
-            "| Time of Transition | PID | Old State   | New State  | REM CPU BURST |Exec End Time \n"
-            "+--------------------+-----+-------------+------------+---------------+--------------\n");
+            "+--------------------+-----+-------------+------------+\n"
+            "| Time of Transition | PID | Old State   | New State  |\n"
+            "+--------------------+-----+-------------+------------+\n");
 }
 
 
@@ -479,7 +479,7 @@ void log_execution_transition(int time, Process *process, const char *old_state,
     }
 
     // Print to log file
-    fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s | %-11d | %-11d | \n", time, process->pid, old_state, new_state, process->remaining_burst_time, process->process_execution_end_time);
+    fprintf(execution_output_file, "| %-18d | %-3d | %-11s | %-11s | \n", time, process->pid, old_state, new_state);
 }
 
 
